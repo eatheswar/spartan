@@ -11,7 +11,7 @@
 
 ## 🚀 Key Innovations
 
-* **Zero-Skipping Compute Engine:** A custom state machine that detects zero-weights and bypasses the DSP pipeline, reducing compute latency by up to **33.3%** compared to dense dense architectures.
+* **Zero-Skipping Compute Engine:** A custom state machine that detects zero-weights and bypasses the DSP pipeline, reducing compute latency by up to **33.3%** compared to dense architectures.
 * **End-to-End Live Data Pipeline:** Integrated PC-to-FPGA bridge utilizing a custom UART receiver to stream 8-bit image data (static or live webcam) directly into the hardware activation buffer.
 * **Cycle-Accurate Profiling:** Built-in hardware cycle-counters mapped to onboard LEDs for real-time latency benchmarking.
 
@@ -46,6 +46,17 @@ The hardware pipeline consists of three primary subsystems operating at 100 MHz:
 | **Execution Latency** | 36 Cycles (360 ns) | 24-27 Cycles (240-270 ns) | **~33.3% Reduction** |
 
 > **Note:** Every time a DSP48E1 slice on the Artix-7 toggles to multiply by zero, it burns dynamic (switching) power. By physically bypassing the multiplier when a zero weight is detected, SPARTAN actively lowers the dynamic power consumption of the FPGA.
+
+---
+
+## 🔮 Future Work
+
+As the SPARTAN architecture scales, the following hardware upgrades are planned:
+
+* **CSR/RLE Memory Compression:** Currently, zero-weights still consume physical BRAM space. Implementing Compressed Sparse Row (CSR) or Run-Length Encoding (RLE) memory controllers will allow significantly larger neural networks to fit onto the heavily constrained Basys 3 hardware.
+* **Matrix Scale-Up:** Expanding the activation buffer and state machine to process larger convolution windows (e.g., 3x3, 5x5) and deeper network layers.
+* **Parallel MAC Units:** Deploying multiple DSP slices to process non-zero multiply-accumulate operations simultaneously rather than sequentially.
+* **AXI4-Stream Integration:** Upgrading the PC-to-FPGA ingestion pipeline from UART to an AXI4-Stream interface to support high-bandwidth, direct memory access (DMA) integration with soft-core processors (like RISC-V).
 
 ---
 
