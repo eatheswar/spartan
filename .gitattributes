@@ -1,0 +1,19 @@
+# Ignore Vivado generated folders and IP cores from language stats
+*.cache/** linguist-generated
+*.gen/** linguist-generated
+*.hw/** linguist-generated
+*.ip_user_files/** linguist-generated
+*.runs/** linguist-generated
+*.sim/** linguist-generated
+*.srcs/**/ip/** linguist-generated
+
+# Ignore Vivado project files
+*.xpr linguist-generated
+*.jou linguist-generated
+*.log linguist-generated
+*.str linguist-generated
+
+# Force GitHub to recognize our actual source code languages
+*.sv linguist-detectable
+*.v linguist-detectable
+*.py linguist-detectable
