@@ -1,0 +1,6 @@
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "D:/Project_Spartan/src/spartan_sparse_pe.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module spartan_sparse_pe
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "D:/Project_Spartan/src/spartan_top.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module spartan_top
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "D:/Project_Spartan/Spartan_Accelerator/Spartan_Accelerator.srcs/sim_1/new/spartan_tb.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module spartan_tb

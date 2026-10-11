@@ -1,0 +1,9 @@
+0.7
+2020.2
+Nov 14 2025
+19:37:27
+D:/Project_Spartan/Spartan_Accelerator/Spartan_Accelerator.gen/sources_1/ip/bram_weights_rom/sim/bram_weights_rom.v,1791743879,verilog,,,,bram_weights_rom,,uvm,../../../../../../vivado/2025.2/Vivado/data/rsb/busdef,,,,,
+D:/Project_Spartan/Spartan_Accelerator/Spartan_Accelerator.sim/sim_1/behav/xsim/glbl.v,1756381829,verilog,,,,glbl,,uvm,,,,,,
+D:/Project_Spartan/Spartan_Accelerator/Spartan_Accelerator.srcs/sim_1/new/spartan_tb.sv,1791744369,systemVerilog,,,,spartan_tb,,uvm,../../../../../../vivado/2025.2/Vivado/data/rsb/busdef,,,,,
+D:/Project_Spartan/src/spartan_sparse_pe.sv,1791742739,systemVerilog,,D:/Project_Spartan/src/spartan_top.sv,,spartan_sparse_pe,,uvm,../../../../../../vivado/2025.2/Vivado/data/rsb/busdef,,,,,
+D:/Project_Spartan/src/spartan_top.sv,1791744645,systemVerilog,,D:/Project_Spartan/Spartan_Accelerator/Spartan_Accelerator.srcs/sim_1/new/spartan_tb.sv,,spartan_top,,uvm,../../../../../../vivado/2025.2/Vivado/data/rsb/busdef,,,,,

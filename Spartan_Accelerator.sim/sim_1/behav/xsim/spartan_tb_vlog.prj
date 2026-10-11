@@ -1,0 +1,14 @@
+# compile verilog/system verilog design source files
+verilog xil_defaultlib  --include "../../../../../../vivado/2025.2/Vivado/data/rsb/busdef" \
+"../../../../Spartan_Accelerator.gen/sources_1/ip/bram_weights_rom/sim/bram_weights_rom.v" \
+
+sv xil_defaultlib  --include "../../../../../../vivado/2025.2/Vivado/data/rsb/busdef" \
+"../../../../../src/spartan_sparse_pe.sv" \
+"../../../../../src/spartan_top.sv" \
+"../../../../Spartan_Accelerator.srcs/sim_1/new/spartan_tb.sv" \
+
+# compile glbl module
+verilog xil_defaultlib "glbl.v"
+
+# Do not sort compile order
+nosort
