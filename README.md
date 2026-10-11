@@ -11,33 +11,37 @@
 
 ## 🚀 Key Innovations
 
-* **Zero-Skipping Compute Engine:** A custom state machine that detects zero-weights and bypasses the DSP pipeline, reducing compute latency by up to **33.3%** compared to dense architectures.
-* **End-to-End Live Data Pipeline:** Integrated PC-to-FPGA bridge utilizing a custom UART receiver to stream 8-bit image data (static or live webcam) directly into the hardware activation buffer.
-* **Cycle-Accurate Profiling:** Built-in hardware cycle-counters mapped to onboard LEDs for real-time latency benchmarking.
+- **Zero-Skipping Compute Engine:** A custom state machine that detects zero-weights and bypasses the DSP pipeline, reducing compute latency by up to **33.3%** compared to dense architectures.
+- **End-to-End Live Data Pipeline:** Integrated PC-to-FPGA bridge utilizing a custom UART receiver to stream 8-bit image data (static or live webcam) directly into the hardware activation buffer.
+- **Cycle-Accurate Profiling:** Built-in hardware cycle-counters mapped to onboard LEDs for real-time latency benchmarking.
 
 ---
 
 ## 🏗️ System Architecture
 
+![Quantized CNN Dataflow](src/cnn_dataflow.png)
+
 The hardware pipeline consists of three primary subsystems operating at 100 MHz:
 
 ### 1. Data Ingestion (UART to Buffer)
-* A custom `uart_rx` module operates at 115200 baud to receive continuous 8-bit pixel data from a host PC.
-* Incoming data is cascaded into a 32-bit shift register (`act_vec_buffer`), packing four INT8 activations before triggering the compute engine.
+- A custom `uart_rx` module operates at 115200 baud to receive continuous 8-bit pixel data from a host PC.
+- Incoming data is cascaded into a 32-bit shift register (`act_vec_buffer`), packing four INT8 activations before triggering the compute engine.
 
 ### 2. Memory Subsystem
-* **Weight BRAM:** Stores L1-regularized, pre-trained network weights. Initialized via global synthesis.
-* **Activation Buffer:** Holds the streaming input vector. 
+- **Weight BRAM:** Stores L1-regularized, pre-trained network weights. Initialized via global synthesis.
+- **Activation Buffer:** Holds the streaming input vector. 
 
 ### 3. Sparse Compute Engine (The Datapath)
-* Upon receiving the `rx_valid` flag from the UART module, the state machine fetches the first weight.
-* **If Weight == 0:** The clock cycle increments, but the MAC is disabled (Zero-Skip).
-* **If Weight != 0:** The activation is multiplied by the weight and added to the accumulator.
-* Once the vector is processed, a `done` signal is raised, and the total clock cycles are latched to the LED output.
+- Upon receiving the `rx_valid` flag from the UART module, the state machine fetches the first weight.
+- **If Weight == 0:** The clock cycle increments, but the MAC is disabled (Zero-Skip).
+- **If Weight != 0:** The activation is multiplied by the weight and added to the accumulator.
+- Once the vector is processed, a `done` signal is raised, and the total clock cycles are latched to the LED output.
 
 ---
 
 ## 📊 Hardware Performance Results
+
+![Dense vs Sparse MAC Execution](src/sparse.png)
 
 | Metric | Dense Accelerator (Baseline) | SPARTAN Accelerator | Improvement |
 | :--- | :--- | :--- | :--- |
@@ -53,10 +57,10 @@ The hardware pipeline consists of three primary subsystems operating at 100 MHz:
 
 As the SPARTAN architecture scales, the following hardware upgrades are planned:
 
-* **CSR/RLE Memory Compression:** Currently, zero-weights still consume physical BRAM space. Implementing Compressed Sparse Row (CSR) or Run-Length Encoding (RLE) memory controllers will allow significantly larger neural networks to fit onto the heavily constrained Basys 3 hardware.
-* **Matrix Scale-Up:** Expanding the activation buffer and state machine to process larger convolution windows (e.g., 3x3, 5x5) and deeper network layers.
-* **Parallel MAC Units:** Deploying multiple DSP slices to process non-zero multiply-accumulate operations simultaneously rather than sequentially.
-* **AXI4-Stream Integration:** Upgrading the PC-to-FPGA ingestion pipeline from UART to an AXI4-Stream interface to support high-bandwidth, direct memory access (DMA) integration with soft-core processors (like RISC-V).
+- **CSR/RLE Memory Compression:** Currently, zero-weights still consume physical BRAM space. Implementing Compressed Sparse Row (CSR) or Run-Length Encoding (RLE) memory controllers will allow significantly larger neural networks to fit onto the heavily constrained Basys 3 hardware.
+- **Matrix Scale-Up:** Expanding the activation buffer and state machine to process larger convolution windows (e.g., 3x3, 5x5) and deeper network layers.
+- **Parallel MAC Units:** Deploying multiple DSP slices to process non-zero multiply-accumulate operations simultaneously rather than sequentially.
+- **AXI4-Stream Integration:** Upgrading the PC-to-FPGA ingestion pipeline from UART to an AXI4-Stream interface to support high-bandwidth, direct memory access (DMA) integration with soft-core processors (like RISC-V).
 
 ---
 
