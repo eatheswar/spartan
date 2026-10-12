@@ -1,0 +1,12 @@
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "D:/spartan v2/project_1/project_1.srcs/sources_1/new/csr_decoder.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module csr_decoder
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "D:/spartan v2/project_1/project_1.srcs/sources_1/new/seven_segment_ctrl.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module seven_segment_ctrl
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "D:/spartan v2/project_1/project_1.srcs/sources_1/new/spartan_sparse_pe_v2.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module spartan_sparse_pe_v2
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "D:/spartan v2/project_1/project_1.srcs/sources_1/new/spartan_v2_top.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module spartan_v2_top
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "D:/spartan v2/project_1/project_1.srcs/sim_1/new/tb_spartan_v2.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module tb_spartan_v2
+INFO: [VRFC 10-2263] Analyzing Verilog file "D:/spartan v2/project_1/project_1.sim/sim_1/behav/xsim/glbl.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module glbl
