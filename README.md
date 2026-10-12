@@ -62,7 +62,7 @@ A unified testbench (`tb_comparator.sv`) was used to feed the exact same input v
 * **Input Vector:** `act_vec = [0, 0, 3, 4]`, `weight_vec = [0, 0, 5, 2]`
 * **Expected Math:** $(0 \times 0) + (0 \times 0) + (3 \times 5) + (4 \times 2) = 23$ (Hex `0x17`)
 
-![Comparative Waveform Proof](src/waveform_proof.png)
+![Comparative Waveform Proof](src/waveform_proof.PNG)
 
 **Waveform Analysis:**
 As shown in the behavioral simulation, both the Dense and Sparse modules successfully compute the identical accumulator result (`00017`). However, because the upper two weights are zero, SPARTAN's priority-encoder state machine terminates early. The `fetch_next_sparse` flag asserts exactly 2 clock cycles (20ns) before the `fetch_next_dense` flag, proving the physical cycle reduction in silicon.
