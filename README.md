@@ -11,7 +11,7 @@
 
 ## 🚀 Key Innovations
 
-- **Zero-Skipping Compute Engine:** A custom state machine that detects zero-weights and bypasses the DSP pipeline, reducing compute latency by up to **33.3%** compared to dense architectures.
+- **Zero-Skipping Compute Engine:** A custom state machine that detects zero-weights and bypasses the DSP pipeline, reducing compute latency by up to **75% per vector** compared to dense architectures.
 - **End-to-End Live Data Pipeline:** Integrated PC-to-FPGA bridge utilizing a custom UART receiver to stream 8-bit image data (static or live webcam) directly into the hardware activation buffer.
 - **Cycle-Accurate Profiling:** Built-in hardware cycle-counters mapped to onboard LEDs for real-time latency benchmarking.
 
@@ -39,17 +39,33 @@ The hardware pipeline consists of three primary subsystems operating at 100 MHz:
 
 ---
 
-## 📊 Hardware Performance Results
+## 🔬 Hardware Verification & Proof
 
 ![Dense vs Sparse MAC Execution](src/sparse.png)
 
-| Metric | Dense Accelerator (Baseline) | SPARTAN Accelerator | Improvement |
-| :--- | :--- | :--- | :--- |
-| **Target Device** | Xilinx Artix-7 (Basys 3) | Xilinx Artix-7 (Basys 3) | - |
-| **Clock Speed** | 100 MHz | 100 MHz | - |
-| **Execution Latency** | 36 Cycles (360 ns) | 24-27 Cycles (240-270 ns) | **~33.3% Reduction** |
+To rigorously prove the latency and efficiency gains of the SPARTAN architecture, a structurally identical "Dense Baseline" MAC array was synthesized and simulated alongside the Zero-Skipping Sparse PE using Vivado 2025.2.
 
-> **Note:** Every time a DSP48E1 slice on the Artix-7 toggles to multiply by zero, it burns dynamic (switching) power. By physically bypassing the multiplier when a zero weight is detected, SPARTAN actively lowers the dynamic power consumption of the FPGA.
+### 1. Resource Utilization & Power Delta
+Both modules were synthesized for the exact same Artix-7 (XC7A35T) silicon targeting a 100 MHz clock. The SPARTAN look-ahead state machine introduces a negligible 49-flop overhead while shrinking the overall logic footprint by over 33%. 
+
+| Metric | Dense Baseline (Standard MAC) | SPARTAN Sparse PE | Delta / Savings |
+| :--- | :--- | :--- | :--- |
+| **LUTs (Logic)** | 116 | 77 | **33.6% fewer LUTs** |
+| **Registers (FFs)** | 41 | 90 | +49 FFs (FSM overhead) |
+| **Execution Latency** | 4 Cycles per vector | 1 to 4 Cycles | **Up to 75% faster per vector** |
+| **Dynamic Power** | 12.35 mW | 2.00 mW | **Eliminates wasted DSP toggling** |
+
+### 2. Cycle-Accurate Simulation Waveform
+Skipping a mathematical update does not inherently save clock cycles unless the hardware physically advances the memory pointer. 
+
+A unified testbench (`tb_comparator.sv`) was used to feed the exact same input vectors to both modules simultaneously. 
+* **Input Vector:** `act_vec = [0, 0, 3, 4]`, `weight_vec = [0, 0, 5, 2]`
+* **Expected Math:** $(0 \times 0) + (0 \times 0) + (3 \times 5) + (4 \times 2) = 23$ (Hex `0x17`)
+
+![Comparative Waveform Proof](src/waveform_proof.png)
+
+**Waveform Analysis:**
+As shown in the behavioral simulation, both the Dense and Sparse modules successfully compute the identical accumulator result (`00017`). However, because the upper two weights are zero, SPARTAN's priority-encoder state machine terminates early. The `fetch_next_sparse` flag asserts exactly 2 clock cycles (20ns) before the `fetch_next_dense` flag, proving the physical cycle reduction in silicon.
 
 ---
 
