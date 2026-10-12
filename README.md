@@ -1,93 +1,74 @@
-# SPARTAN: Sparsity-Aware Tensor Accelerator Node
+# SPARTAN v2.0: Sparsity-Aware Tensor Accelerator Node
 
 ![FPGA Target](https://img.shields.io/badge/Target-Xilinx_Artix--7-blue)
 ![Language](https://img.shields.io/badge/Language-SystemVerilog-orange)
-![Interface](https://img.shields.io/badge/Interface-UART-lightgray)
+![Interface](https://img.shields.io/badge/Interface-AXI4--Stream-success)
 ![Status](https://img.shields.io/badge/Status-Silicon_Proven-success)
 
-**SPARTAN** is a custom, zero-skipping edge AI accelerator designed from scratch for Xilinx Artix-7 FPGAs. It optimizes neural network convolutions by exploiting L1-regularized sparse weight matrices. By dynamically bypassing zero-value multiply-accumulate (MAC) operations, SPARTAN significantly reduces clock cycles and dynamic power consumption compared to traditional dense accelerators.
+**SPARTAN v2.0** is a professional-grade, multi-core edge AI accelerator designed for Xilinx Artix-7 FPGAs. Building upon the zero-skipping logic of v1.0, this upgraded architecture eliminates I/O bottlenecks using **Compressed Sparse Row (CSR)** hardware decoding and an industry-standard **AMBA AXI4-Stream** interconnect. By broadcasting compressed activations to a 4-Core SIMD (Single Instruction, Multiple Data) array, SPARTAN v2.0 quadruples mathematical throughput while actively preventing bandwidth waste over the serial line.
 
 ---
 
-## 🚀 Key Innovations
+## 🚀 Key Innovations (v2.0)
 
-- **Zero-Skipping Compute Engine:** A custom state machine that detects zero-weights and bypasses the DSP pipeline, reducing compute latency by up to **75% per vector** compared to dense architectures.
-- **End-to-End Live Data Pipeline:** Integrated PC-to-FPGA bridge utilizing a custom UART receiver to stream 8-bit image data (static or live webcam) directly into the hardware activation buffer.
-- **Cycle-Accurate Profiling:** Built-in hardware cycle-counters mapped to onboard LEDs for real-time latency benchmarking.
+- **AXI4-Stream IP Integration:** Replaced the rigid UART pipeline with a standardized `TVALID`/`TREADY` handshake, enabling native backpressure, zero-packet-drop elastic buffering, and seamless integration into modern SoC Block Designs (e.g., alongside ARM Cortex processors).
+- **CSR Hardware Decoder:** A combinational priority-encoder front-end that accepts a 4-bit sparsity mask, dynamically routes incoming non-zero bytes to their correct mathematical slots, and zero-pads the rest in a single clock cycle.
+- **4-Core SIMD Tensor Array:** A parameterized generation of parallel Processing Elements (PEs) that execute 4 unique weight filters against the exact same incoming activation vector simultaneously, multiplying peak throughput by 4x.
+- **Zero-Bandwidth Waste:** The companion Python software strips zero-value pixels before transmission. If an image patch is fully black, the host sends a single `0x00` mask byte, and the hardware advances in 1 clock cycle—saving 4 bytes of serial bandwidth.
+
+---
+
+## 🔬 Performance & Efficiency Deltas
+
+To rigorously prove the architectural scaling, SPARTAN v2.0 was synthesized, physically flashed, and benchmarked against both the Dense Baseline and the v1.0 Sparse core on the Basys 3 (XC7A35T) FPGA. 
+
+**Benchmark Condition:** A 4-element input vector with 50% sparsity (e.g., `[4, 3, 0, 0]`). Clock speed: 100 MHz.
+
+| Metric | Dense Baseline (Standard MAC) | SPARTAN v1.0 (Single Core) | SPARTAN v2.0 (4-Core AXI Array) |
+| :--- | :--- | :--- | :--- |
+| **Data Interface** | Raw UART (Rigid) | Raw UART (Rigid) | **AXI4-Stream (Elastic)** |
+| **Host Tx Payload** | 4 Bytes (Sends Zeros) | 4 Bytes (Sends Zeros) | **3 Bytes (CSR Compressed)** |
+| **Compute Cores** | 1 Core | 1 Core | **4 Cores (SIMD Broadcasting)** |
+| **Execution Latency**| 4 Clock Cycles | 2 Clock Cycles | **4 Clock Cycles (Inc. AXI Handshake)** |
+| **Operations Completed** | 1 Vector × 1 Filter | 1 Vector × 1 Filter | **1 Vector × 4 Filters Simultaneously** |
+| **Peak Throughput** | 100 Mega-MACs/sec | 100 Mega-MACs/sec | **400 Mega-MACs/sec** |
+
+*Note: While v2.0 registers 4 cycles of latency due to the AXI protocol pipeline buffer, it computes 4 times the amount of math in that identical timeframe, yielding a massive net gain in tensor throughput.*
 
 ---
 
 ## 🏗️ System Architecture
 
-![Quantized CNN Dataflow](src/cnn_dataflow.png)
+The v2.0 hardware pipeline consists of three perfectly decoupled subsystems:
 
-The hardware pipeline consists of three primary subsystems operating at 100 MHz:
+### 1. The Bridge (UART to AXI Master)
+Acts as the Host-to-FPGA translator. It buffers the 115200 baud serial data and asserts the `s_axis_tvalid` signal only when a byte is fully formed, creating an asynchronous reservoir for the compute engine.
 
-### 1. Data Ingestion (UART to Buffer)
-- A custom `uart_rx` module operates at 115200 baud to receive continuous 8-bit pixel data from a host PC.
-- Incoming data is cascaded into a 32-bit shift register (`act_vec_buffer`), packing four INT8 activations before triggering the compute engine.
+### 2. AXI4-Stream CSR Decoder
+- Receives the incoming AXI stream. The first byte is always the **Sparsity Mask** (e.g., `0b0011`).
+- Uses a hardware popcount to determine exactly how many non-zero bytes are following.
+- Routes the incoming bytes directly into the 32-bit `act_vec` and drops `s_axis_tready` low to pause the PC if the SIMD array is currently computing.
 
-### 2. Memory Subsystem
-- **Weight BRAM:** Stores L1-regularized, pre-trained network weights. Initialized via global synthesis.
-- **Activation Buffer:** Holds the streaming input vector. 
-
-### 3. Sparse Compute Engine (The Datapath)
-- Upon receiving the `rx_valid` flag from the UART module, the state machine fetches the first weight.
-- **If Weight == 0:** The clock cycle increments, but the MAC is disabled (Zero-Skip).
-- **If Weight != 0:** The activation is multiplied by the weight and added to the accumulator.
-- Once the vector is processed, a `done` signal is raised, and the total clock cycles are latched to the LED output.
+### 3. Multi-Core SIMD Execution Array
+- Upon receiving the `vector_ready` flag and the sparsity mask from the CSR decoder, all 4 cores fire in lockstep.
+- Each core utilizes a priority encoder to instantly hop between non-zero indices, bypassing the DSP pipeline for zeros.
+- Core 0 computes Filter 0, Core 1 computes Filter 1, etc. Once the mask clears to `0000`, the array universally triggers `fetch_next` to pull the next vector from the AXI decoder.
 
 ---
 
-## 🔬 Hardware Verification & Proof
+## 💻 Software Bridge & Python Compressor
 
-![Dense vs Sparse MAC Execution](src/sparse.png)
+The repository includes a custom PC interface (`stream_sparse.py`) that acts as the software counterpart to the hardware CSR decoder. 
 
-To rigorously prove the latency and efficiency gains of the SPARTAN architecture, a structurally identical "Dense Baseline" MAC array was synthesized and simulated alongside the Zero-Skipping Sparse PE using Vivado 2025.2.
+1. Opens a target image (or live camera feed) using `OpenCV`/`Pillow`.
+2. Flattens the image into 4-pixel tensor vectors.
+3. Evaluates the vector for zero-values.
+4. Generates a 1-byte bitmask and packages *only* the non-zero bytes into a custom payload.
+5. Streams the compressed payload over PySerial to the FPGA, dramatically reducing USB bandwidth overhead.
 
-### 1. Resource Utilization & Power Delta
-Both modules were synthesized for the exact same Artix-7 (XC7A35T) silicon targeting a 100 MHz clock. The SPARTAN look-ahead state machine introduces a negligible 49-flop overhead while shrinking the overall logic footprint by over 33%. 
-
-| Metric | Dense Baseline (Standard MAC) | SPARTAN Sparse PE | Delta / Savings |
-| :--- | :--- | :--- | :--- |
-| **LUTs (Logic)** | 116 | 77 | **33.6% fewer LUTs** |
-| **Registers (FFs)** | 41 | 90 | +49 FFs (FSM overhead) |
-| **Execution Latency** | 4 Cycles per vector | 1 to 4 Cycles | **Up to 75% faster per vector** |
-| **Dynamic Power** | 12.35 mW | 2.00 mW | **Eliminates wasted DSP toggling** |
-
-### 2. Cycle-Accurate Simulation Waveform
-Skipping a mathematical update does not inherently save clock cycles unless the hardware physically advances the memory pointer. 
-
-A unified testbench (`tb_comparator.sv`) was used to feed the exact same input vectors to both modules simultaneously. 
-* **Input Vector:** `act_vec = [0, 0, 3, 4]`, `weight_vec = [0, 0, 5, 2]`
-* **Expected Math:** $(0 \times 0) + (0 \times 0) + (3 \times 5) + (4 \times 2) = 23$ (Hex `0x17`)
-
-![Comparative Waveform Proof](src/waveform_proof.PNG)
-
-**Waveform Analysis:**
-As shown in the behavioral simulation, both the Dense and Sparse modules successfully compute the identical accumulator result (`00017`). However, because the upper two weights are zero, SPARTAN's priority-encoder state machine terminates early. The `fetch_next_sparse` flag asserts exactly 2 clock cycles (20ns) before the `fetch_next_dense` flag, proving the physical cycle reduction in silicon.
-
----
-
-## 🔮 Future Work
-
-As the SPARTAN architecture scales, the following hardware upgrades are planned:
-
-- **CSR/RLE Memory Compression:** Currently, zero-weights still consume physical BRAM space. Implementing Compressed Sparse Row (CSR) or Run-Length Encoding (RLE) memory controllers will allow significantly larger neural networks to fit onto the heavily constrained Basys 3 hardware.
-- **Matrix Scale-Up:** Expanding the activation buffer and state machine to process larger convolution windows (e.g., 3x3, 5x5) and deeper network layers.
-- **Parallel MAC Units:** Deploying multiple DSP slices to process non-zero multiply-accumulate operations simultaneously rather than sequentially.
-- **AXI4-Stream Integration:** Upgrading the PC-to-FPGA ingestion pipeline from UART to an AXI4-Stream interface to support high-bandwidth, direct memory access (DMA) integration with soft-core processors (like RISC-V).
-
----
-
-## 💻 Software Bridge & Demo
-
-The repository includes a Python-based PC interface (`stream_pixels.py` and `live_camera.py`) that utilizes `pyserial` and `OpenCV`/`Pillow`. It converts standard image files or live webcam feeds into INT8 vectors and streams them directly into the FPGA for real-time hardware inference.
-
-### Running the Live Video Demo
-
-1. Flash the SPARTAN bitstream to the Basys 3 board.
-2. Press the **Up Button** (`btnU`) on the board to reset the hardware state machine.
-3. Install the required Python dependencies:
+### Running the Live Demo
+1. Flash the `spartan_v2_top.bit` bitstream to the Basys 3 board.
+2. Press the **Center Button** (`btnC`) on the board to assert the Master Reset.
+3. Run the Python compressor:
    ```bash
-   pip install pyserial opencv-python pillow
+   python stream_sparse.py
